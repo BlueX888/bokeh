@@ -497,6 +497,31 @@ describe("DataRange1d", () => {
       expect(r.start).to.not.be.NaN
       expect(r.end).to.not.be.NaN
     })
+
+    it("should not use bounds of a plot removed from the layout", async () => {
+      const r = DataRange1d.create()
+      const g0 = GlyphRenderer.create({data_source: ColumnDataSource.create(), glyph: Scatter.create()})
+      const g1 = GlyphRenderer.create({data_source: ColumnDataSource.create(), glyph: Scatter.create()})
+      const p0 = Plot.create({renderers: [g0], x_range: r})
+      const p1 = Plot.create({renderers: [g1], x_range: r})
+      const pv0 = await build_view(p0)
+      const pv1 = await build_view(p1)
+      const range_manager = (pv0 as any)._range_manager as RangeManager // XXX: protected
+
+      r.update(new Map([[g0, {x0: 0, x1: 3, y0: 0, y1: 1}]]), 0, pv0)
+      r.update(new Map([[g1, {x0: 10, x1: 20, y0: 0, y1: 1}]]), 0, pv1)
+      expect(r.start).to.be.equal(-1)
+      expect(r.end).to.be.equal(21)
+
+      range_manager.invalidate_dataranges = false
+
+      pv1.remove()
+      expect(range_manager.invalidate_dataranges).to.be.true
+
+      r.update(new Map([[g0, {x0: 0, x1: 3, y0: 0, y1: 1}]]), 0, pv0)
+      expect(r.start).to.be.similar(-0.15)
+      expect(r.end).to.be.similar(3.15)
+    })
   })
 
   describe("changing model attribute", () => {

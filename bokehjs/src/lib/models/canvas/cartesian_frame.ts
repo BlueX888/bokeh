@@ -28,6 +28,11 @@ export class CartesianFrameView extends CanvasPanelView {
 
   override remove(): void {
     this._unregister_frame()
+    for (const range of this.ranges) {
+      if (range instanceof DataRange1d) {
+        range.detach_plot(this.plot_view)
+      }
+    }
     super.remove()
   }
 

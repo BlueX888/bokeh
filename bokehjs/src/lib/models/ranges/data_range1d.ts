@@ -354,6 +354,15 @@ export class DataRange1d extends DataRange {
     }
   }
 
+  /** @internal */
+  detach_plot(plot: PlotView): void {
+    this._plot_bounds.delete(plot)
+    for (const linked of this.linked_plots) {
+      linked.invalidate_dataranges = true
+      linked.request_repaint()
+    }
+  }
+
   reset(): void {
     this.have_updated_interactively = false
     // change events silenced as PlotView.update_dataranges triggers property callbacks
