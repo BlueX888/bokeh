@@ -17,6 +17,7 @@ import {WheelZoomTool} from "@bokehjs/models/tools/gestures/wheel_zoom_tool"
 import {Toolbar} from "@bokehjs/models/tools/toolbar"
 import type {GraphicsBox} from "@bokehjs/core/graphics"
 import {InlineBox, TextBox} from "@bokehjs/core/graphics"
+import {delay} from "@bokehjs/core/util/defer"
 import {MathTextBox, TeXView, TeX} from "@bokehjs/models/text/math_text"
 
 function text_of(box: GraphicsBox): string {
@@ -213,6 +214,34 @@ describe("Axis", () => {
 
     const labels = axis_view.compute_labels([0, 2, 4.0, 6, 8, 10])
     expect(labels.items.map((l) => (l as TextBox).text)).to.be.equal(["zero", "2", "four", "6", "8", "ten"])
+  })
+
+  it("should drop labels removed from major_label_overrides", async () => {
+    const plot = Plot.create({
+      x_range: Range1d.create({start: 0, end: 10}),
+      y_range: Range1d.create({start: 0, end: 10}),
+    })
+    const axis = LinearAxis.create({
+      ticker: BasicTicker.create(),
+      formatter: BasicTickFormatter.create(),
+      major_label_overrides: new Map([[0, "zero"], [4, "four"], [10, "ten"]]),
+    })
+    plot.add_layout(axis, "below")
+    const {view: plot_view} = await display(plot)
+    const axis_view = plot_view.owner.get_one(axis)
+
+    const ticks = [0, 2, 4, 6, 8, 10]
+    const labels = () => axis_view.compute_labels(ticks).items.map((item) => (item as TextBox).text)
+
+    expect(labels()).to.be.equal(["zero", "2", "four", "6", "8", "ten"])
+
+    axis.major_label_overrides = new Map()
+    await delay(0)
+    expect(labels()).to.be.equal(["0", "2", "4", "6", "8", "10"])
+
+    axis.major_label_overrides = new Map([[0, "null"]])
+    await delay(0)
+    expect(labels()).to.be.equal(["null", "2", "4", "6", "8", "10"])
   })
 
   it("should compute labels with math text on overrides", async () => {
